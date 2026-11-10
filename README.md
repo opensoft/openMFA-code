@@ -25,3 +25,12 @@ navigation; authority travels in grants, and a project that keeps spec and
 code in one repository is reviewed identically.
 
 Topic: `xf-project-openmfa`.
+
+## Product status
+
+The verifier design is captured in the spec leg's wallet-mfa brainstorm packet.
+Implementation, published APIs, and deployment await governed acceptance.
+
+## License
+
+[Apache License 2.0](LICENSE).

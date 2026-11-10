@@ -1,0 +1,7 @@
+openMFA
+Copyright 2026 openMFA contributors
+
+Licensed under the Apache License, Version 2.0.
+This repository includes openRepoShape scaffolding, Copyright openRepoShape contributors,
+used under Apache-2.0. Shape provenance and copied-file digests are recorded in
+contracts/shape-pin.yaml in the assembly root.
