@@ -53,7 +53,6 @@ def main():
                     print(remaining.rstrip(), flush=True)
                 returncode = process.returncode
         report = json.loads(output.read_text())
-        expected_error = "command-refused" if mode == "injected-failure" else "InterruptedError"
         # Error spelling is checked below; unrelated setup failure cannot count
         # as a successful cleanup exercise.
         if mode == "injected-failure":

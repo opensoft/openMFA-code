@@ -145,7 +145,7 @@ def main():
                     raise RuntimeError("isolated-test-subnet-overlap")
     case = "wmq-" + uuid.uuid4().hex[:16]
     image, network = "wallet-mfa-qualification:" + case, case
-    names, volumes = [], []
+    names = []
     report = {"schema": 1, "stage": "isolated-source-conformance", "case": case,
               "operational_acceptance": False, "sources": sources, "base_image": BASE,
               "custody_model": "isolated_invocable", "gates": {}, "passed": False}
@@ -167,7 +167,6 @@ def main():
             credential_volume, state_volume = case + "-" + role + "-credentials", case + "-" + role + "-state"
             for volume in (credential_volume, state_volume):
                 docker("volume", "create", "--label", label, volume)
-                volumes.append(volume)
             helper = case + "-init-" + role
             docker("create", "--name", helper, "--label", label, "--network=none", "--read-only",
                    "--cap-drop=ALL", "--security-opt=no-new-privileges",
