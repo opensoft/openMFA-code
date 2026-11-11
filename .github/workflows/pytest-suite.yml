@@ -1,0 +1,17 @@
+name: pytest-suite
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  pytest-suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e . pytest==9.1.1
+      - run: python -m pytest tests/ -q

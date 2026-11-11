@@ -1,0 +1,100 @@
+[
+  {
+    "name": "unbound",
+    "public_test_seed_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+    "public_key_hex": "29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+    "caller": {
+      "caller_ref": "caller:vector",
+      "tenant": "tenant:vector",
+      "audience": "audience:vector"
+    },
+    "challenge": {
+      "profile": "openmfa.challenge.v0",
+      "id": "00000000-0000-4000-8000-000000000001",
+      "issuer": "issuer:vector",
+      "caller_ref": "caller:vector",
+      "tenant": "tenant:vector",
+      "audience": "audience:vector",
+      "subject_ref": "subject:machine:vector",
+      "nonce": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+      "method": "wallet-ed25519-possession.v0",
+      "issued_at": 1000,
+      "expires_at": 1120,
+      "request_digest": null
+    },
+    "challenge_canonical_utf8": "{\"audience\":\"audience:vector\",\"caller_ref\":\"caller:vector\",\"expires_at\":1120,\"id\":\"00000000-0000-4000-8000-000000000001\",\"issued_at\":1000,\"issuer\":\"issuer:vector\",\"method\":\"wallet-ed25519-possession.v0\",\"nonce\":\"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE\",\"profile\":\"openmfa.challenge.v0\",\"request_digest\":null,\"subject_ref\":\"subject:machine:vector\",\"tenant\":\"tenant:vector\"}",
+    "challenge_digest": "sha256:95236ba5640e56d695514ef82013af2827c7707c632d8f78005ec9985e7dcffb",
+    "unsigned_canonical_utf8": "{\"alg\":\"Ed25519\",\"audience\":\"audience:vector\",\"binding_ref\":\"binding:vector:1\",\"binding_revision\":3,\"caller_ref\":\"caller:vector\",\"challenge_digest\":\"sha256:95236ba5640e56d695514ef82013af2827c7707c632d8f78005ec9985e7dcffb\",\"expires_at\":1065,\"id\":\"00000000-0000-4000-8000-000000000002\",\"issuer\":\"issuer:vector\",\"key_ref\":\"issuer-key:vector\",\"profile\":\"openmfa.verification-receipt.v0\",\"request_digest\":null,\"subject_ref\":\"subject:machine:vector\",\"tenant\":\"tenant:vector\",\"verified_at\":1005,\"verified_methods\":[\"wallet-ed25519-possession.v0\"]}",
+    "message_hex": "6f70656e4d46412e726563656970742e7630007b22616c67223a2245643235353139222c2261756469656e6365223a2261756469656e63653a766563746f72222c2262696e64696e675f726566223a2262696e64696e673a766563746f723a31222c2262696e64696e675f7265766973696f6e223a332c2263616c6c65725f726566223a2263616c6c65723a766563746f72222c226368616c6c656e67655f646967657374223a227368613235363a39353233366261353634306535366436393535313465663832303133616632383237633737303763363332643866373830303565633939383565376463666662222c22657870697265735f6174223a313036352c226964223a2230303030303030302d303030302d343030302d383030302d303030303030303030303032222c22697373756572223a226973737565723a766563746f72222c226b65795f726566223a226973737565722d6b65793a766563746f72222c2270726f66696c65223a226f70656e6d66612e766572696669636174696f6e2d726563656970742e7630222c22726571756573745f646967657374223a6e756c6c2c227375626a6563745f726566223a227375626a6563743a6d616368696e653a766563746f72222c2274656e616e74223a2274656e616e743a766563746f72222c2276657269666965645f6174223a313030352c2276657269666965645f6d6574686f6473223a5b2277616c6c65742d656432353531392d706f7373657373696f6e2e7630225d7d",
+    "receipt": {
+      "profile": "openmfa.verification-receipt.v0",
+      "alg": "Ed25519",
+      "id": "00000000-0000-4000-8000-000000000002",
+      "issuer": "issuer:vector",
+      "key_ref": "issuer-key:vector",
+      "subject_ref": "subject:machine:vector",
+      "caller_ref": "caller:vector",
+      "tenant": "tenant:vector",
+      "audience": "audience:vector",
+      "challenge_digest": "sha256:95236ba5640e56d695514ef82013af2827c7707c632d8f78005ec9985e7dcffb",
+      "request_digest": null,
+      "verified_methods": [
+        "wallet-ed25519-possession.v0"
+      ],
+      "verified_at": 1005,
+      "expires_at": 1065,
+      "binding_ref": "binding:vector:1",
+      "binding_revision": 3,
+      "signature": "7qWQK3UZaEZq7MGcoYElHMrmLVwvUHyuDh7hOVwXn1Dja-JTpjlym9tCX0J8yoUqGiFvAeOCUC0F6oL5ZudvDQ"
+    }
+  },
+  {
+    "name": "bound-unicode-and-max-safe-revision",
+    "public_test_seed_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+    "public_key_hex": "29acbae141bccaf0b22e1a94d34d0bc7361e526d0bfe12c89794bc9322966dd7",
+    "caller": {
+      "caller_ref": "caller:vector",
+      "tenant": "tenant:vector",
+      "audience": "audience:é/🚀"
+    },
+    "challenge": {
+      "profile": "openmfa.challenge.v0",
+      "id": "00000000-0000-4000-8000-000000000001",
+      "issuer": "issuer:vector",
+      "caller_ref": "caller:vector",
+      "tenant": "tenant:vector",
+      "audience": "audience:é/🚀",
+      "subject_ref": "subject:machine:vector",
+      "nonce": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI",
+      "method": "wallet-ed25519-possession.v0",
+      "issued_at": 1000,
+      "expires_at": 1120,
+      "request_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "challenge_canonical_utf8": "{\"audience\":\"audience:é/🚀\",\"caller_ref\":\"caller:vector\",\"expires_at\":1120,\"id\":\"00000000-0000-4000-8000-000000000001\",\"issued_at\":1000,\"issuer\":\"issuer:vector\",\"method\":\"wallet-ed25519-possession.v0\",\"nonce\":\"AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI\",\"profile\":\"openmfa.challenge.v0\",\"request_digest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"subject_ref\":\"subject:machine:vector\",\"tenant\":\"tenant:vector\"}",
+    "challenge_digest": "sha256:55efebb451ec97667e98952bb2ba9d855c19cb92514b42d4120dd3410dfe12e7",
+    "unsigned_canonical_utf8": "{\"alg\":\"Ed25519\",\"audience\":\"audience:é/🚀\",\"binding_ref\":\"binding:vector:1\",\"binding_revision\":9007199254740991,\"caller_ref\":\"caller:vector\",\"challenge_digest\":\"sha256:55efebb451ec97667e98952bb2ba9d855c19cb92514b42d4120dd3410dfe12e7\",\"expires_at\":1065,\"id\":\"00000000-0000-4000-8000-000000000002\",\"issuer\":\"issuer:vector\",\"key_ref\":\"issuer-key:vector\",\"profile\":\"openmfa.verification-receipt.v0\",\"request_digest\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"subject_ref\":\"subject:machine:vector\",\"tenant\":\"tenant:vector\",\"verified_at\":1005,\"verified_methods\":[\"wallet-ed25519-possession.v0\"]}",
+    "message_hex": "6f70656e4d46412e726563656970742e7630007b22616c67223a2245643235353139222c2261756469656e6365223a2261756469656e63653ac3a92ff09f9a80222c2262696e64696e675f726566223a2262696e64696e673a766563746f723a31222c2262696e64696e675f7265766973696f6e223a393030373139393235343734303939312c2263616c6c65725f726566223a2263616c6c65723a766563746f72222c226368616c6c656e67655f646967657374223a227368613235363a35356566656262343531656339373636376539383935326262326261396438353563313963623932353134623432643431323064643334313064666531326537222c22657870697265735f6174223a313036352c226964223a2230303030303030302d303030302d343030302d383030302d303030303030303030303032222c22697373756572223a226973737565723a766563746f72222c226b65795f726566223a226973737565722d6b65793a766563746f72222c2270726f66696c65223a226f70656e6d66612e766572696669636174696f6e2d726563656970742e7630222c22726571756573745f646967657374223a227368613235363a61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161222c227375626a6563745f726566223a227375626a6563743a6d616368696e653a766563746f72222c2274656e616e74223a2274656e616e743a766563746f72222c2276657269666965645f6174223a313030352c2276657269666965645f6d6574686f6473223a5b2277616c6c65742d656432353531392d706f7373657373696f6e2e7630225d7d",
+    "receipt": {
+      "profile": "openmfa.verification-receipt.v0",
+      "alg": "Ed25519",
+      "id": "00000000-0000-4000-8000-000000000002",
+      "issuer": "issuer:vector",
+      "key_ref": "issuer-key:vector",
+      "subject_ref": "subject:machine:vector",
+      "caller_ref": "caller:vector",
+      "tenant": "tenant:vector",
+      "audience": "audience:é/🚀",
+      "challenge_digest": "sha256:55efebb451ec97667e98952bb2ba9d855c19cb92514b42d4120dd3410dfe12e7",
+      "request_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "verified_methods": [
+        "wallet-ed25519-possession.v0"
+      ],
+      "verified_at": 1005,
+      "expires_at": 1065,
+      "binding_ref": "binding:vector:1",
+      "binding_revision": 9007199254740991,
+      "signature": "Vj0pEqptHYHmqWPL_uXd-mNYfMGpRksy2oQZ5sgigacUTXzaVyuO7GZHJmx8YbO0CW6UWZEqNRPIVV2mYAZzCQ"
+    }
+  }
+]
