@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import io
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -122,11 +123,25 @@ def main():
     parser.add_argument("--expected", type=Path, required=True, help="Trusted expected root commit/tree JSON")
     parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--fail-after-start", action="store_true", help="Exercise finalization of an injected failure")
+    parser.add_argument("--subnet", help="Operator-checked unused RFC2544 /28 internal subnet; no daemon pool change")
     args = parser.parse_args()
     wallet_root, mfa_root = args.wallet_root.resolve(strict=True), args.mfa_root.resolve(strict=True)
     expected = json.loads(args.expected.read_text())
     # Resolve and bind all sources before creating any Docker resource.
     sources = package_preflight(wallet_root, mfa_root, expected)
+    if args.subnet:
+        selected = ipaddress.ip_network(args.subnet, strict=True)
+        if selected.version != 4 or selected.prefixlen != 28 or not selected.subnet_of(ipaddress.ip_network("198.18.0.0/15")):
+            raise RuntimeError("invalid-isolated-test-subnet")
+        identifiers = docker("network", "ls", "-q").stdout.split()
+        networks = json.loads(docker("network", "inspect", *identifiers).stdout) if identifiers else []
+        for item in networks:
+            for config in (item.get("IPAM") or {}).get("Config") or []:
+                if not config.get("Subnet"):
+                    continue
+                existing = ipaddress.ip_network(config["Subnet"])
+                if existing.version == selected.version and existing.overlaps(selected):
+                    raise RuntimeError("isolated-test-subnet-overlap")
     case = "wmq-" + uuid.uuid4().hex[:16]
     image, network = "wallet-mfa-qualification:" + case, case
     names, volumes = [], []
@@ -145,7 +160,8 @@ def main():
         }
         (directory / "credentials/custody/policies.json").write_text(json.dumps(policies))
         (directory / "credentials/custody/policies.json").chmod(0o644)
-        docker("network", "create", "--internal", "--label", label, network)
+        network_options = ["--subnet", str(selected)] if args.subnet else []
+        docker("network", "create", "--internal", "--label", label, *network_options, network)
         for role in ("custody", "verifier", "agent"):
             credential_volume, state_volume = case + "-" + role + "-credentials", case + "-" + role + "-state"
             for volume in (credential_volume, state_volume):
