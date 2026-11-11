@@ -75,7 +75,10 @@ def verifier(request):
         return service.consume(caller, request["receipt_id"], operation_digest=request.get("operation_digest", OPERATION),
                                idempotency_key=request["key"])
     if action == "attempt-sign":
-        return RemoteSigner(client(), subject_ref=SUBJECT).sign(b"not-an-authorized-message").hex()
+        # An otherwise valid proof must fail solely because this peer lacks sign.
+        now = int(time.time())
+        binding = registry.resolve(SUBJECT, now=now)
+        return create_proof(OPERATION, binding, RemoteSigner(client(), subject_ref=SUBJECT), now=now)
     if action == "health":
         try:
             registry.resolve(SUBJECT, now=int(time.time()))

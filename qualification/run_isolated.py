@@ -226,7 +226,7 @@ def main():
         report["gates"]["container_package_provenance"] = True
         report["gates"]["worker_private_key_absence"] = invoke(agent_name, "agent", {"action": "inspect"})
         invoke(agent_name, "agent", {"action": "export"}, accepted=False, error="service-refused")
-        invoke(verifier_name, "verifier", {"action": "attempt-sign"}, accepted=False, error="service-refused")
+        invoke(verifier_name, "verifier", {"action": "attempt-sign"}, accepted=False, error="signer-unavailable")
         report["gates"]["no_export_and_role_separation"] = True
 
         challenge = invoke(verifier_name, "verifier", {"action": "create"})
