@@ -10,5 +10,8 @@ requires-python = ">=3.12"
 license = "Apache-2.0"
 dependencies = ["cryptography==50.0.1", "rfc8785==0.1.4"]
 
+[project.optional-dependencies]
+qualification = ["PyYAML==6.0.3", "packaging==26.3"]
+
 [tool.setuptools.packages.find]
 include = ["openmfa_runtime*"]
