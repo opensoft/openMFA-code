@@ -16,6 +16,7 @@ import uuid
 
 from openmfa_runtime.assembly_gate import check_assembly, check_installed_package
 from pki import generate
+from cleanup import finalize
 
 DEPENDENCIES = ["cryptography==50.0.1", "rfc8785==0.1.4", "PyYAML==6.0.3",
                 "cffi==2.1.1", "pycparser==3.0"]
@@ -55,7 +56,7 @@ def package_preflight(wallet_root, mfa_root, expected):
                                       tree=identity["tree"], contracts=CONTRACTS[name])
         report[name]["package"] = check_installed_package(root / "code", package)
     # The invoked driver and runtime script must also belong to this selected source.
-    for filename in ("run_isolated.py", "role.py", "pki.py", "Dockerfile"):
+    for filename in ("run_isolated.py", "role.py", "pki.py", "cleanup.py", "check_cleanup.py", "Dockerfile"):
         if Path(__file__).with_name(filename).read_bytes() != (mfa_root / "code/qualification" / filename).read_bytes():
             raise RuntimeError("qualification-driver-source-mismatch")
     return report
@@ -317,30 +318,8 @@ def main():
         # if a second cancellation arrives.
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
-        failures = []
-        for kind, list_command, remove_command in (
-            ("containers", ["ps", "-aq"], ["rm", "-f"]),
-            ("networks", ["network", "ls", "-q"], ["network", "rm"]),
-            ("volumes", ["volume", "ls", "-q"], ["volume", "rm"]),
-            ("images", ["image", "ls", "-q"], ["image", "rm"]),
-        ):
-            listing = docker(*list_command, "--filter", "label=" + label, check=False)
-            if listing.returncode:
-                failures.append(kind + "-listing")
-                continue
-            identifiers = list(dict.fromkeys(listing.stdout.split()))
-            for identifier in identifiers:
-                if docker(*remove_command, identifier, check=False).returncode:
-                    failures.append(kind + "-removal")
-            readback = docker(*list_command, "--filter", "label=" + label, check=False)
-            if readback.returncode or readback.stdout.strip():
-                failures.append(kind + "-absence")
-        try:
-            temporary.cleanup()
-        except OSError:
-            failures.append("private-temporary-state")
-        report["cleanup"] = {"absence_verified": not failures, "failures": failures}
-        report["passed"] = report["passed"] and not failures
+        report["cleanup"] = finalize(docker, label, temporary)
+        report["passed"] = report["passed"] and report["cleanup"]["absence_verified"]
         args.evidence.write_text(json.dumps(report, indent=2) + "\n")
         print(json.dumps({"event": "complete", "passed": report["passed"], "cleanup": report["cleanup"]}), flush=True)
     return 0 if report["passed"] else 1
