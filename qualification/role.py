@@ -130,8 +130,20 @@ def main():
         while True:
             time.sleep(60)
     if mode == "revoke":
-        BindingRegistry(STATE / "registry").revoke(BINDING)
+        registry = BindingRegistry(STATE / "registry")
+        registry.revoke(registry.resolve(SUBJECT, now=int(time.time())).binding_ref)
         print(json.dumps({"ok": True, "result": "revoked"}))
+        return
+    if mode == "rotate":
+        registry = BindingRegistry(STATE / "registry")
+        previous = registry.resolve(SUBJECT, now=int(time.time()))
+        public = provision_key(STATE / "keys", "key:qualification-machine:2")
+        now = int(time.time())
+        replacement = TrustedKeyBinding("binding:qualification-machine:2", previous.wallet_ref,
+            "key:qualification-machine:2", SUBJECT, previous.custody_ref, public,
+            previous.revision + 1, now - 60, now + 900)
+        registry.register(replacement, expected_revision=previous.revision)
+        print(json.dumps({"ok": True, "result": "rotated"}))
         return
     request = json.load(sys.stdin)
     try:

@@ -62,7 +62,12 @@ def check_assembly(root, *, repository, commit, tree, contracts):
     if set(legs) != {"assembly", "spec", "code"}:
         raise CompatibilityError("incomplete-assembly")
     shape = _yaml(root / "contracts/shape-pin.yaml")
-    for item in shape.get("files", []):
+    copies = shape.get("files")
+    required = {"scripts/validate-repository-naming.py", "scripts/validate-manifest.py", "scripts/validate-pins.py"}
+    if (type(copies) is not list or not copies
+            or not required <= {item.get("path") for item in copies if type(item) is dict}):
+        raise CompatibilityError("incomplete-shape-pin")
+    for item in copies:
         relative = Path(item["path"])
         if relative.is_absolute() or ".." in relative.parts:
             raise CompatibilityError("invalid-shape-path")

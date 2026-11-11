@@ -4,7 +4,6 @@ import hashlib
 import io
 import ipaddress
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -42,13 +41,6 @@ def run(*args, input=None, timeout=120, check=True):
 
 def docker(*args, **kwargs):
     return run("docker", *args, **kwargs)
-
-
-def source_identity(root):
-    return {
-        "commit": run("git", "-C", str(root), "rev-parse", "HEAD").stdout.strip(),
-        "tree": run("git", "-C", str(root), "show", "-s", "--format=%T", "HEAD").stdout.strip(),
-    }
 
 
 def package_preflight(wallet_root, mfa_root, expected):
@@ -100,7 +92,7 @@ def build_image(directory, wallet_root, mfa_root, image, case):
     return digests
 
 
-def invoke(container, role, request, *, accepted=True):
+def invoke(container, role, request, *, accepted=True, error=None):
     result = docker("exec", "-i", container, "python", "/opt/role.py", role,
                     input=json.dumps(request), check=False)
     try:
@@ -113,6 +105,8 @@ def invoke(container, role, request, *, accepted=True):
         return body["result"]
     if not result.returncode or body.get("ok") is not False:
         raise RuntimeError("negative-case-was-accepted")
+    if error is None or body.get("error") != error:
+        raise RuntimeError("unexpected-negative-refusal:" + str(body.get("error")))
     return body["error"]
 
 
@@ -224,18 +218,18 @@ def main():
                 raise RuntimeError("container-package-source-mismatch")
         report["gates"]["container_package_provenance"] = True
         report["gates"]["worker_private_key_absence"] = invoke(agent_name, "agent", {"action": "inspect"})
-        invoke(agent_name, "agent", {"action": "export"}, accepted=False)
-        invoke(verifier_name, "verifier", {"action": "attempt-sign"}, accepted=False)
+        invoke(agent_name, "agent", {"action": "export"}, accepted=False, error="service-refused")
+        invoke(verifier_name, "verifier", {"action": "attempt-sign"}, accepted=False, error="service-refused")
         report["gates"]["no_export_and_role_separation"] = True
 
         challenge = invoke(verifier_name, "verifier", {"action": "create"})
         proof = invoke(agent_name, "agent", {"action": "prove", "challenge": challenge})
         tampered = {**proof, "signature": ("A" if proof["signature"][0] != "A" else "B") + proof["signature"][1:]}
-        invoke(verifier_name, "verifier", {"action": "verify", "challenge": challenge, "proof": tampered, "key": "verify:tampered"}, accepted=False)
+        invoke(verifier_name, "verifier", {"action": "verify", "challenge": challenge, "proof": tampered, "key": "verify:tampered"}, accepted=False, error="factor-verification-failed")
         another = invoke(verifier_name, "verifier", {"action": "create"})
-        invoke(verifier_name, "verifier", {"action": "verify", "challenge": another, "proof": proof, "key": "verify:cross"}, accepted=False)
+        invoke(verifier_name, "verifier", {"action": "verify", "challenge": another, "proof": proof, "key": "verify:cross"}, accepted=False, error="factor-verification-failed")
         invoke(verifier_name, "verifier", {"action": "verify", "challenge": challenge, "proof": proof, "key": "verify:wrong-caller",
-               "caller": {"caller_ref": "other", "tenant": "tenant:disposable", "audience": "audience:codeXfactory-pilot"}}, accepted=False)
+               "caller": {"caller_ref": "other", "tenant": "tenant:disposable", "audience": "audience:codeXfactory-pilot"}}, accepted=False, error="not-found")
         receipt = invoke(verifier_name, "verifier", {"action": "verify", "challenge": challenge, "proof": proof, "key": "verify:1"})
         repeated = invoke(verifier_name, "verifier", {"action": "verify", "challenge": challenge, "proof": proof, "key": "verify:1"})
         if receipt != repeated or receipt["verified_methods"] != ["wallet-ed25519-possession.v0"]:
@@ -245,17 +239,55 @@ def main():
         outcome = invoke(verifier_name, "verifier", consume)
         if invoke(verifier_name, "verifier", consume) != outcome:
             raise RuntimeError("unstable-retry")
-        invoke(verifier_name, "verifier", {**consume, "operation_digest": "sha256:" + "b" * 64}, accepted=False)
+        invoke(verifier_name, "verifier", {**consume, "operation_digest": "sha256:" + "b" * 64}, accepted=False, error="idempotency-conflict")
         docker("restart", verifier_name)
         if invoke(verifier_name, "verifier", consume) != outcome:
             raise RuntimeError("restart-outcome-lost")
         report["gates"]["durable_one_use_retry_and_restart"] = True
 
+        expired = invoke(verifier_name, "verifier", {"action": "create", "ttl": 1})
+        # No fixture clock: let the actual service's half-open lifetime close.
+        time.sleep(1.1)
+        invoke(verifier_name, "verifier", {"action": "verify", "challenge": expired,
+               "proof": proof, "key": "verify:expired"}, accepted=False, error="expired")
+        report["gates"]["actual_clock_expiry"] = True
+
+        pending = invoke(verifier_name, "verifier", {"action": "create"})
+        pending_proof = invoke(agent_name, "agent", {"action": "prove", "challenge": pending})
+        docker("stop", custody_name)
+        invoke(verifier_name, "verifier", {"action": "verify", "challenge": pending,
+               "proof": pending_proof, "key": "verify:availability"}, accepted=False, error="factor-verification-failed")
+        docker("start", custody_name)
+        for _ in range(20):
+            try:
+                invoke(verifier_name, "verifier", {"action": "health"})
+                break
+            except RuntimeError:
+                time.sleep(0.25)
+        else:
+            raise RuntimeError("custody-recovery-timeout")
+        invoke(verifier_name, "verifier", {"action": "verify", "challenge": pending,
+               "proof": pending_proof, "key": "verify:availability"})
+        report["gates"]["unavailable_registry_rollback_and_recovery"] = True
+
+        old_challenge = invoke(verifier_name, "verifier", {"action": "create"})
+        old_proof = invoke(agent_name, "agent", {"action": "prove", "challenge": old_challenge})
+        old_receipt = invoke(verifier_name, "verifier", {"action": "verify", "challenge": old_challenge,
+                             "proof": old_proof, "key": "verify:old-binding"})
+        pending_rotation = invoke(verifier_name, "verifier", {"action": "create"})
+        pending_rotation_proof = invoke(agent_name, "agent", {"action": "prove", "challenge": pending_rotation})
+        docker("exec", custody_name, "python", "/opt/role.py", "rotate")
+        invoke(verifier_name, "verifier", {"action": "consume", "receipt_id": old_receipt["id"],
+               "key": "consume:old-binding"}, accepted=False, error="revoked-binding")
+        invoke(verifier_name, "verifier", {"action": "verify", "challenge": pending_rotation,
+               "proof": pending_rotation_proof, "key": "verify:rotated-replay"}, accepted=False, error="factor-verification-failed")
+        report["gates"]["remote_key_rotation_refuses_old_evidence"] = True
+
         challenge = invoke(verifier_name, "verifier", {"action": "create"})
         proof = invoke(agent_name, "agent", {"action": "prove", "challenge": challenge})
         receipt = invoke(verifier_name, "verifier", {"action": "verify", "challenge": challenge, "proof": proof, "key": "verify:revoke"})
         docker("exec", custody_name, "python", "/opt/role.py", "revoke")
-        invoke(verifier_name, "verifier", {"action": "consume", "receipt_id": receipt["id"], "key": "consume:revoke"}, accepted=False)
+        invoke(verifier_name, "verifier", {"action": "consume", "receipt_id": receipt["id"], "key": "consume:revoke"}, accepted=False, error="verifier-unavailable")
         docker("restart", custody_name)
         for _ in range(20):
             try:
@@ -268,7 +300,7 @@ def main():
         else:
             raise RuntimeError("persistent-revocation-lost")
         fresh = invoke(verifier_name, "verifier", {"action": "create"})
-        invoke(agent_name, "agent", {"action": "prove", "challenge": fresh}, accepted=False)
+        invoke(agent_name, "agent", {"action": "prove", "challenge": fresh}, accepted=False, error="service-refused")
         report["gates"]["remote_revocation_and_service_restart"] = True
         report["passed"] = True
     except BaseException as error:
