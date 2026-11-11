@@ -1,5 +1,6 @@
 """Container entrypoints for actual isolated service integration."""
 import json
+import hashlib
 import os
 from pathlib import Path
 import sys
@@ -109,6 +110,16 @@ def agent(request):
 
 def main():
     mode = sys.argv[1]
+    if mode == "source-files":
+        import openwallet_runtime
+        import openmfa_runtime
+        result = {}
+        for name, package in (("wallet", openwallet_runtime), ("mfa", openmfa_runtime)):
+            directory = Path(package.__file__).parent
+            result[name] = {str(path.relative_to(directory)): hashlib.sha256(path.read_bytes()).hexdigest()
+                            for path in directory.rglob("*.py") if "__pycache__" not in path.parts}
+        print(json.dumps(result))
+        return
     if mode == "init-volume":
         os.chmod(STATE, 0o777)
         return

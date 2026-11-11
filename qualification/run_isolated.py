@@ -1,12 +1,14 @@
 """Actual isolated source qualification; no live identity/provider calls."""
 import argparse
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
 import uuid
@@ -73,9 +75,15 @@ def build_image(directory, wallet_root, mfa_root, image, case):
     docker("image", "inspect", BASE)
     run(sys.executable, "-m", "pip", "--isolated", "download", "--index-url", "https://pypi.org/simple",
         "--only-binary=:all:", "--no-deps", "--dest", str(wheels), *DEPENDENCIES, timeout=180)
-    for root in (wallet_root, mfa_root):
+    for index, root in enumerate((wallet_root, mfa_root)):
+        source = directory / ("wheel-source-" + str(index))
+        source.mkdir()
+        archive = subprocess.run(["git", "-C", str(root / "code"), "archive", "--format=tar", "HEAD"],
+                                 capture_output=True, check=True, timeout=30).stdout
+        with tarfile.open(fileobj=io.BytesIO(archive)) as stream:
+            stream.extractall(source, filter="data")
         run(sys.executable, "-m", "pip", "--isolated", "wheel", "--no-deps", "--no-build-isolation",
-            "--wheel-dir", str(wheels), str(root / "code"), timeout=120)
+            "--wheel-dir", str(wheels), str(source), timeout=120)
     from packaging.utils import parse_wheel_filename
     requirements, digests = [], {}
     for wheel in sorted(wheels.glob("*.whl")):
@@ -194,6 +202,11 @@ def main():
         if not json.loads(docker("network", "inspect", network).stdout)[0]["Internal"]:
             raise RuntimeError("network-isolation-refused")
         report["gates"]["container_boundaries"] = isolation
+        installed = json.loads(docker("exec", agent_name, "python", "/opt/role.py", "source-files").stdout)
+        for name in ("wallet", "mfa"):
+            if installed[name] != sources[name]["package"]["files"]:
+                raise RuntimeError("container-package-source-mismatch")
+        report["gates"]["container_package_provenance"] = True
         report["gates"]["worker_private_key_absence"] = invoke(agent_name, "agent", {"action": "inspect"})
         invoke(agent_name, "agent", {"action": "export"}, accepted=False)
         invoke(verifier_name, "verifier", {"action": "attempt-sign"}, accepted=False)
