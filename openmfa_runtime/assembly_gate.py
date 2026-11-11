@@ -101,7 +101,10 @@ def check_assembly(root, *, repository, commit, tree, contracts):
         if hashlib.sha256((root / path).read_bytes()).hexdigest() != digest:
             raise CompatibilityError("contract-digest-mismatch")
     for validator in ("validate-repository-naming.py", "validate-manifest.py", "validate-pins.py"):
-        result = subprocess.run([sys.executable, str(root / "scripts" / validator)],
+        arguments = [sys.executable, str(root / "scripts" / validator)]
+        if validator == "validate-repository-naming.py":
+            arguments += ["--project", "project.yaml"]
+        result = subprocess.run(arguments,
                                 cwd=root, capture_output=True, timeout=60)
         if result.returncode:
             raise CompatibilityError("canonical-assembly-gate-refused")
