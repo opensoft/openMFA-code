@@ -6,6 +6,7 @@ import ipaddress
 import json
 from pathlib import Path
 import shutil
+import signal
 import subprocess
 import sys
 import tarfile
@@ -119,6 +120,12 @@ def main():
     parser.add_argument("--fail-after-start", action="store_true", help="Exercise finalization of an injected failure")
     parser.add_argument("--subnet", help="Operator-checked unused RFC2544 /28 internal subnet; no daemon pool change")
     args = parser.parse_args()
+
+    def cancel(_signal, _frame):
+        raise InterruptedError("qualification-cancelled")
+
+    signal.signal(signal.SIGTERM, cancel)
+    signal.signal(signal.SIGINT, cancel)
     wallet_root, mfa_root = args.wallet_root.resolve(strict=True), args.mfa_root.resolve(strict=True)
     expected = json.loads(args.expected.read_text())
     # Resolve and bind all sources before creating any Docker resource.
@@ -307,6 +314,10 @@ def main():
         report["error"] = str(error) if isinstance(error, RuntimeError) else type(error).__name__
         print("Qualification failed: " + type(error).__name__ + ": " + str(error), file=sys.stderr)
     finally:
+        # Once finalization begins, finish the bounded run-owned cleanup even
+        # if a second cancellation arrives.
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         failures = []
         for kind, list_command, remove_command in (
             ("containers", ["ps", "-aq"], ["rm", "-f"]),
